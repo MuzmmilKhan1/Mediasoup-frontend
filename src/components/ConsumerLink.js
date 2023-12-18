@@ -2,27 +2,29 @@ import React, {useState, useEffect, useRef} from 'react';
 import io from 'socket.io-client';
 import * as mediasoupClient from 'mediasoup-client';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom';
 import { Notyf } from 'notyf';
 import 'notyf/notyf.min.css';
-import { GrNext } from "react-icons/gr";
+import '../App.css';
 import Helpers from '../Helpers/Helpers';
 
-export default function Consume() {
-  const [socket, setSocket] = useState(null)
+export default function ConsumerLink() {
+  const { id } = useParams();
   const [roomName, setRoomName] = useState("")
-  const [description, setDescription] = useState("");
   const [rooms, setRooms] = useState([])
-  const [viewerName, setViewerName] = useState("")
-  const [heading, setHeading] = useState("Select the Stream to Play")
+  const [heading, setHeading] = useState("")
+  const [description, setDescription] = useState("")
   const [videoDisplay, setVideoDisplay] = useState("none")
   const [videoElementDisplay, setVideoElementDisplay] = useState("none")
   const [otherElementDisplay, setOtherElementDisplay] = useState("flex")
   const [joinButtonDisplay, setJoinButtonDisplay] = useState("inline")
   const [exitButtonDisplay, setExitButtonDisplay] = useState("none")
+  const [btnText, setBtnText] = useState("Join")
+  const [dataObj, setDataObj] = useState()
   const navigate = useNavigate();
   const notyf = new Notyf();
 
+    let socket;
     let rtpCapabilities;
     let device;
     let consumer;
@@ -55,8 +57,7 @@ export default function Consume() {
     }
   
     useEffect(() => {
-      let socket;
-      socket = io(`${Helpers.server}`);
+      socket = io(`https://127.0.0.1:8000/`);
       socket.on('connection-success', ({ socketId }) => {
         // console.log(socketId);
       });
@@ -66,32 +67,18 @@ export default function Consume() {
         notyf.success("Stream Has been Ended")
         window.location.reload();
       })
-      setSocket(socket);
     }, [roomName]);
 
     useEffect(()=>{
-      let socket;
       socket = io(`${Helpers.server}`);
       socket.on("newUser", (data)=>{
-        // console.log("Routers ",data)
         setRooms(Object.values(data))
-        if (Object.keys(data).length === 0) {
-          setHeading("No Streams to Watch")
-        }
+        // console.log("Rooms ",rooms)
+        setDataObj(data)
       })
-      setSocket(socket)
-    }, [remoteVideo])
+    }, [])
+  
 
-
-    // useEffect(()=>{
-    //   let socket;
-    //   socket = io('https://127.0.0.1:8000');
-    //   socket.on("noroom", data=>{
-    //     console.log(data)
-    //   })
-    //   setSocket(socket);
-    // })
-      
     const goConsume = () => {
       goConnect(false)
     }
@@ -116,18 +103,17 @@ export default function Consume() {
             // we assign to local variable and will be used when
             // loading the client Device (see createDevice above)
             if(data == null){
-              notyf.error("Stream has been ended or Doesn't Exists")
-              window.history.reload();
+              notyf.error("Stream Has been Ended or Doesn't exist")
             }
             if(data != null){
-              // console.log(`Router RTP Capabilities... ${data.rtpCapabilities}`)
+              console.log(`Router RTP Capabilities... ${data.rtpCapabilities}`)
               rtpCapabilities = data.rtpCapabilities
               createDevice()
             }
           })
         }catch(error){
-          // console.log(error)
-          notyf.error("An Error Occured, Try Again")
+          console.log(error)
+          // notyf.error("An Error Occurred")
         }
     }
   
@@ -142,14 +128,14 @@ export default function Consume() {
           routerRtpCapabilities: rtpCapabilities
         })
     
-        // console.log('RTP Capabilities', device.rtpCapabilities)
+        console.log('RTP Capabilities', device.rtpCapabilities)
         goCreateTransport()
       } catch (error) {
-        // console.log(error)
         notyf.error("An Error Occured, Try Again")
+        console.log(error)
         if (error.name === 'UnsupportedError')
           console.warn('browser not supported')
-          notyf.error("Your Browser Doesn't support Streaming")
+          notyf.error("Your Browser Doesn't support Stream")
       }
     }
       
@@ -160,12 +146,12 @@ export default function Consume() {
           // The server sends back params needed 
           // to create Send Transport on the client side
           if (params.error) {
-            notyf.error("An Error Occured While Creating a Connection, Try Again")
-            // console.log(params.error)
+            notyf.error("An Error Occured, Try Again")
+            console.log(params.error)
             return
           }
       
-          // console.log("Create Web RTC transport ",params)
+          console.log("Create Web RTC transport ",params)
       
           // creates a new WebRTC Transport to receive media
           // based on server's consumer transport params
@@ -186,8 +172,9 @@ export default function Consume() {
               // Tell the transport that parameters were transmitted.
               callback()
             } catch (error) {
-              // console.log(error)
               notyf.error("An Error Occured, Try Again")
+              console.log(error)
+              // Tell the transport that something was wrong
               errback(error)
             }
           })
@@ -204,12 +191,12 @@ export default function Consume() {
           rtpCapabilities: device.rtpCapabilities,
         }, async ({ params }) => {
           if (params.error) {
-            notyf.error("An Error Occured, Try Again")
-            // console.log('Cannot Consume')
+            notyf.error("Error Occured While Playing Video")
+            console.log('Cannot Consume')
             return
           }
       
-          // console.log("Consume",params)
+          console.log("Consume",params)
           // then consume with the local consumer transport
           // which creates a consumer
           consumer = await consumerTransport.consume({
@@ -223,8 +210,10 @@ export default function Consume() {
           setVideoDisplay("block")
           setJoinButtonDisplay("none")
           setExitButtonDisplay("inline")
+          setVideoElementDisplay("block")
+          setOtherElementDisplay("none")
           const { track } = consumer
-          // console.log(track)
+          console.log(track)
           remoteVideo.current.srcObject = new MediaStream([track])
       
           // the server consumer started with media paused
@@ -233,107 +222,64 @@ export default function Consume() {
         })
       }
 
-      const joinRoom = (room, desc) => {
-        setHeading(room)
+      const joinRoom = () => {
+        setRoomName(`${id}`)
+        setHeading(`${id}`)
+        let desc = dataObj[id].description;
+        // console.log(dataObj[id])
         setDescription(desc)
-        setVideoElementDisplay("flex")
-        setOtherElementDisplay("none")
+        setBtnText("Play")
         let b = 0
         if(b <= 1){
-          // goConsume();  // Fix: Add parentheses to call the function
+          goConsume();
           b++;
+        }else{
+          goConsume();
         }
       }
 
       const exitRoom = ()=>{
-        window.location.reload();
+        navigate("/");
       }
       
 
   return (
-    <div style={{
-      width:"100%",
-      // height: "100vh"
-    }} className='d-flex flex-column justify-content-center align-items-center mx-auto'>
-    <h1 className='heading  pt-2' style={{display: otherElementDisplay}}>{heading}</h1>
-    <div 
-    style={{
-      display: videoElementDisplay,
-      width: "100%",
-      height: "100vh"
-    }}  
-    className="justify-content-center flex-row align-items-center"
-    >
-    <div className='blur card fullWidthMobile centered-row mx-2' 
-    style={{
-      boxShadow: "5px 5px 10px rgba(0, 0, 0, 0.3)", 
-      backgroundColor: "rgb(255,255,255,0.4)",
-      height: "70vh",
-      width: "70%"
-    }}
-    >
+    <div style={{width:"100%", height: "100vh"}} className='d-flex flex-row justify-content-center align-items-center mx-auto pt-2'>
+      
+      <div className='card blur fullWidthMobile centered-row m-2 p-2' 
+      style={{width: "70%", height: "70vh",boxShadow: "5px 5px 10px rgba(0, 0, 0, 0.3)", backgroundColor: "rgb(255,255,255,0.4)"}}>
     <h1 className='heading displayOnlyMobileScreen'>{heading}</h1>
-    <video
+    <video 
     id='remoteVideo' 
     ref={remoteVideo} 
     autoPlay playsInline 
     style={{
+    display: videoElementDisplay,
     maxWidth: "100%",
     height: "70vh",
-    display: videoDisplay, 
-    borderRadius: '20px'
-    }}
-    controls
-    className='p-2'
-    ></video>
+    borderRadius: '20px'}} controls></video>
+
+    <button onClick={joinRoom}  
+    style={{display: joinButtonDisplay, background: "linear-gradient(90deg, hsla(318, 44%, 51%, 1), hsla(347, 94%, 48%, 1))", border: "none"}}
+    className='btn btn-success m-2 p-2 w-25' >{btnText}</button>
     <button 
-  style={{display: joinButtonDisplay, background: "linear-gradient(90deg, hsla(318, 44%, 51%, 1), hsla(347, 94%, 48%, 1))", border: "none"}}
-  className='btn btn-success m-2 p-2 w-25' 
-    onClick={goConsume}>Play</button>
-    <button 
+    className='btn btn-success p-2 m-2 mx-auto displayOnlyMobileScreen' 
+    onClick={exitRoom}
     style={{display: exitButtonDisplay, background: "linear-gradient(90deg, hsla(318, 44%, 51%, 1), hsla(347, 94%, 48%, 1))", border: "none"}}
-    className='btn btn-success m-2 p-2 w-25 displayOnlyMobileScreen' 
-    onClick={exitRoom}>Stop Stream</button>
+    >Stop Stream</button>
     </div>
-    
-    <div className='blur card centered-row mx-2 noDisplayMobileScreen' 
-    style={{
-      boxShadow: "5px 5px 10px rgba(0, 0, 0, 0.3)", 
-      backgroundColor: "rgb(255,255,255,0.4)",
-      height: "70vh",
-      width: "30%"
-    }}>
-      <h1 className='heading'>{heading}</h1>
-      <p className='text'>{description}</p>
-      <button 
+
+    <div 
+    style={{width: "30%", height: "70vh",boxShadow: "5px 5px 10px rgba(0, 0, 0, 0.3)", backgroundColor: "rgb(255,255,255,0.4)"}}
+    className='card blur centered-row m-2 p-2 noDisplayMobileScreen'>
+    <h1 className='heading'>{heading}</h1>
+    <p className='text'>{description}</p>
+    <button 
+    className='btn btn-success p-2 m-2 mx-auto' 
+    onClick={exitRoom}
     style={{display: exitButtonDisplay, background: "linear-gradient(90deg, hsla(318, 44%, 51%, 1), hsla(347, 94%, 48%, 1))", border: "none"}}
-    className='btn btn-success m-2 p-2 w-25' 
-    onClick={exitRoom}>Stop Stream</button>
+    >Stop Stream</button>
     </div>
 
     </div>
-
-    <div style={{display: otherElementDisplay, width: "100%"}} className='p-5 row justify-content-evenly'>
-    {rooms.map((room)=>{
-      return(
-      <div
-      key={room.roomId}
-      // className={`d-flex flex-row justify-content-between align-items-center p-5 col-md-3 border rounded m-auto my-1`}
-      className={`d-flex flex-row justify-content-between align-items-center col-md-3 blur card p-5 my-3 scale`}
-      style={{boxShadow: "5px 5px 10px rgba(0, 0, 0, 0.3)", backgroundColor: "rgb(255,255,255,0.4)"}}
-      onClick={()=>{setRoomName(room.room); joinRoom(room.room, room.description)}}
-      >
-        <div className='d-flex flex-column justif-content-center align-items-start '>
-          <h5 className='heading'>{room.room}</h5>
-          <p 
-          className='text'
-          >{room.producerId}</p>
-        </div>
-        <GrNext className="" style={{color: "white", fontWeight: "bolder"}} />
-      </div>
-    );
-  })}
-  </div>
-    </div>
-  )
-}
+  )}

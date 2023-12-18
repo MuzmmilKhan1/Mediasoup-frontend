@@ -1,38 +1,99 @@
-.App {
-  text-align: center;
+body{
+    background: url(./Webp.net-resizeimage.jpg) no-repeat center center fixed; 
+    background-size: cover; 
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.height{
+  height: 100vh;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.blur{
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+
+.scale{
+  /* Set the initial scale */
+  transform: scale(1);
+  
+  /* Add transition for a smooth animation */
+  transition: transform 0.3s ease;
+}
+
+/* Apply scale when hovered */
+.scale:hover {
+  /* Set the scale on hover */
+  transform: scale(1.1);
+}
+
+.centered-row{
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
+  align-items: center;
+}
+
+.heading{
+  font-family: 'Poppins',sans-serif;
+  font-weight: bold;
   color: white;
 }
 
-.App-link {
-  color: #61dafb;
+
+.text{
+  font-family: 'Poppins',sans-serif;
+  color: white;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+.input{
+  background-color: rgba(0, 0, 0, 0.233) !important;
+  border: none !important;
+  color: white !important;
+}
+
+.input::placeholder{
+  color: white !important;
+}
+
+.width-form{
+  width: 40%;
+}
+
+
+.videoHeight{
+  height: 68vh !important;
+  border-radius: 5% !important;
+}
+
+.displayOnlyMobileScreen{
+  display: none !important;
+}
+
+@media screen and (max-width: 992px) {
+  .width-form{
+    width: 60%;
   }
-  to {
-    transform: rotate(360deg);
+}
+
+@media screen and (max-width: 786px) {
+  .width-form{
+    width: 80%;
+  }
+
+  .fullWidthMobile{
+    width: 100% !important;
+  }
+
+  .rowMobileView{
+    flex-direction: column !important;
+  }
+
+  .displayOnlyMobileScreen{
+    display: inline !important;
+  }
+
+  .noDisplayMobileScreen{
+    display: none  !important;
   }
 }
